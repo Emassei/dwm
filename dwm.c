@@ -205,7 +205,7 @@ static void focus(Client *c);
 static void focusin(XEvent *e);
 static void focusmon(const Arg *arg);
 static void focusstack(const Arg *arg);
-static int getdwmblockspid();
+static Atom getatomprop(Client *c, Atom prop);
 static int getrootptr(int *x, int *y);
 static long getstate(Window w);
 static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
@@ -245,7 +245,10 @@ static void setup(void);
 static void seturgent(Client *c, int urg);
 static void showhide(Client *c);
 static void sigchld(int unused);
+#ifndef __OpenBSD__
+static int getdwmblockspid();
 static void sigdwmblocks(const Arg *arg);
+#endif
 static void sighup(int unused);
 static void sigterm(int unused);
 static void spawn(const Arg *arg);
@@ -850,7 +853,7 @@ dirtomon(int dir)
 void
 drawbar(Monitor *m)
 {
-	int x, w, sw = 0;
+	int x, w, tw = 0;
 	int boxs = drw->fonts->h / 9;
 	int boxw = drw->fonts->h / 6 + 2;
 	unsigned int i, occ = 0, urg = 0;
@@ -859,8 +862,8 @@ drawbar(Monitor *m)
 	/* draw status first so it can be overdrawn by tags later */
 	if (m == selmon) { /* status is only drawn on selected monitor */
 		drw_setscheme(drw, scheme[SchemeNorm]);
-		sw = TEXTW(stext) - lrpad + 2; /* 2px right padding */
-		drw_text(drw, m->ww - sw, 0, sw, bh, 0, stext, 0);
+		tw = TEXTW(stext) - lrpad + 2; /* 2px right padding */
+		drw_text(drw, m->ww - tw, 0, tw, bh, 0, stext, 0);
 	}
 
 	for (c = m->clients; c; c = c->next) {
@@ -883,7 +886,7 @@ drawbar(Monitor *m)
 	drw_setscheme(drw, scheme[SchemeNorm]);
 	x = drw_text(drw, x, 0, w, bh, lrpad / 2, m->ltsymbol, 0);
 
-	if ((w = m->ww - sw - x) > bh) {
+	if ((w = m->ww - tw - x) > bh) {
 		if (m->sel) {
 			drw_setscheme(drw, scheme[m == selmon ? SchemeSel : SchemeNorm]);
 			drw_text(drw, x, 0, w, bh, lrpad / 2, m->sel->name, 0);
@@ -1015,6 +1018,7 @@ getatomprop(Client *c, Atom prop)
 	return atom;
 }
 
+#ifndef __OpenBSD__
 int
 getdwmblockspid()
 {
@@ -1026,6 +1030,7 @@ getdwmblockspid()
 	dwmblockspid = pid;
 	return pid != 0 ? 0 : -1;
 }
+#endif
 
 int
 getrootptr(int *x, int *y)
@@ -1770,7 +1775,7 @@ setmfact(const Arg *arg)
 	if (!arg || !selmon->lt[selmon->sellt]->arrange)
 		return;
 	f = arg->f < 1.0 ? arg->f + selmon->mfact : arg->f - 1.0;
-	if (f < 0.1 || f > 0.9)
+	if (f < 0.05 || f > 0.95)
 		return;
 	selmon->mfact = f;
 	arrange(selmon);
@@ -1907,6 +1912,7 @@ sigterm(int unused)
 	quit(&a);
 }
 
+#ifndef __OpenBSD__
 void
 sigdwmblocks(const Arg *arg)
 {
@@ -1923,6 +1929,7 @@ sigdwmblocks(const Arg *arg)
 		}
 	}
 }
+#endif
 
 void
 spawn(const Arg *arg)
@@ -2405,18 +2412,25 @@ getparentprocess(pid_t p)
 {
 	unsigned int v = 0;
 
-#ifdef __linux__
+#if defined(__linux__)
 	FILE *f;
 	char buf[256];
 	snprintf(buf, sizeof(buf) - 1, "/proc/%u/stat", (unsigned)p);
 
 	if (!(f = fopen(buf, "r")))
-		return 0;
+		return (pid_t)0;
 
-	fscanf(f, "%*u %*s %*c %u", &v);
+	if (fscanf(f, "%*u %*s %*c %u", (unsigned *)&v) != 1)
+		v = (pid_t)0;
 	fclose(f);
-#endif /* __linux__ */
+#elif defined(__FreeBSD__)
+	struct kinfo_proc *proc = kinfo_getproc(p);
+	if (!proc)
+		return (pid_t)0;
 
+	v = proc->ki_ppid;
+	free(proc);
+#endif
 	return (pid_t)v;
 }
 
