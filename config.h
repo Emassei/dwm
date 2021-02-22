@@ -167,7 +167,7 @@ static Key keys[] = {
 	{ MODKEY,			XK_r,		spawn,		SHCMD(TERMINAL " -e ranger") },
 	{ MODKEY|ShiftMask,		XK_r,		spawn,		SHCMD(TERMINAL " -e htop") },
 	{ MODKEY,			XK_t,		setlayout,	{.v = &layouts[0]} }, /* tile */
-	{ MODKEY|ShiftMask,		XK_t,		setlayout,	{.v = &layouts[1]} }, /* bstack */
+	{ MODKEY|ShiftMask,		XK_t,		spawn,	SHCMD("toggle_transparency") }, /* Replace with transparency toggle */
 	{ MODKEY,			XK_y,		setlayout,	{.v = &layouts[2]} }, /* spiral */
 	{ MODKEY|ShiftMask,		XK_y,		setlayout,	{.v = &layouts[3]} }, /* dwindle */
 	{ MODKEY,			XK_u,		setlayout,	{.v = &layouts[4]} }, /* deck */
