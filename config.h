@@ -175,12 +175,13 @@ static const Key keys[] = {
 	{ MODKEY|ShiftMask,		XK_y,          setlayout,              {.v = &layouts[3]} }, /* dwindle */
 	{ MODKEY,			XK_u,          setlayout,              {.v = &layouts[4]} }, /* deck */
 	{ MODKEY|ShiftMask,		XK_u,          setlayout,              {.v = &layouts[5]} }, /* monocle */
+	{ MODKEY|ShiftMask,		XK_v,          spawn,                  SHCMD("clipmenu") },
 	{ MODKEY,			XK_i,          setlayout,              {.v = &layouts[6]} }, /* centeredmaster */
 	{ MODKEY|ShiftMask,		XK_i,          setlayout,              {.v = &layouts[7]} }, /* centeredfloatingmaster */
 	{ MODKEY,			XK_o,          incnmaster,             {.i = +1 } },
 	{ MODKEY|ShiftMask,		XK_o,          incnmaster,             {.i = -1 } },
 	{ MODKEY,			XK_p,          spawn,                  {.v = (const char*[]){ "mpc", "toggle", NULL } } },
-	{ MODKEY|ShiftMask,		XK_p,          spawn,                  SHCMD("mpc pause; pauseallmpv") },
+	{ MODKEY|ShiftMask,		XK_p,          spawn,                  SHCMD("flameshot gui") },
 	{ MODKEY,			XK_bracketleft, spawn,                 {.v = (const char*[]){ "mpc", "seek", "-10", NULL } } },
 	{ MODKEY|ShiftMask,		XK_bracketleft, spawn,                 {.v = (const char*[]){ "mpc", "seek", "-60", NULL } } },
 	{ MODKEY,			XK_bracketright, spawn,                {.v = (const char*[]){ "mpc", "seek", "+10", NULL } } },
