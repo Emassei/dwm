@@ -127,8 +127,11 @@ typedef struct {
 	void (*arrange)(Monitor *);
 } Layout;
 
+#define MAX_TAGLEN 16
+
 struct Monitor {
 	char ltsymbol[16];
+	char tagnames[32][MAX_TAGLEN]; /* per-monitor tag names; 32 = dwm tag limit */
 	float mfact;
 	int nmaster;
 	int num;
@@ -220,6 +223,7 @@ static void maprequest(XEvent *e);
 static void monocle(Monitor *m);
 static void motionnotify(XEvent *e);
 static void movemouse(const Arg *arg);
+static void nametag(const Arg *arg);
 static Client *nexttiled(Client *c);
 static void pop(Client *c);
 static void propertynotify(XEvent *e);
@@ -367,6 +371,8 @@ applyrules(Client *c)
 			c->noswallow  = r->noswallow;
 			c->tags |= r->tags;
 			if ((r->tags & SPTAGMASK) && r->isfloating) {
+				c->w = c->mon->ww * 0.8;
+				c->h = c->mon->wh * 0.8;
 				c->x = c->mon->wx + (c->mon->ww / 2 - WIDTH(c) / 2);
 				c->y = c->mon->wy + (c->mon->wh / 2 - HEIGHT(c) / 2);
 			}
@@ -569,7 +575,7 @@ buttonpress(XEvent *e)
 			/* do not reserve space for vacant tags */
 			if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
 				continue;
-			x += TEXTW(tags[i]);
+			x += TEXTW(m->tagnames[i]);
 		} while (ev->x >= x && ++i < LENGTH(tags));
 		if (i < LENGTH(tags)) {
 			click = ClkTagBar;
@@ -813,6 +819,8 @@ createmon(void)
 	m->lt[0] = &layouts[0];
 	m->lt[1] = &layouts[1 % LENGTH(layouts)];
 	strncpy(m->ltsymbol, layouts[0].symbol, sizeof m->ltsymbol);
+	for (unsigned int i = 0; i < LENGTH(tags); i++)
+		strncpy(m->tagnames[i], tags[i], MAX_TAGLEN - 1);
 	return m;
 }
 
@@ -897,9 +905,9 @@ drawbar(Monitor *m)
 		if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
 		continue;
 
-		w = TEXTW(tags[i]);
+		w = TEXTW(m->tagnames[i]);
 		drw_setscheme(drw, scheme[m->tagset[m->seltags] & 1 << i ? SchemeSel : SchemeNorm]);
-		drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
+		drw_text(drw, x, 0, w, bh, lrpad / 2, m->tagnames[i], urg & 1 << i);
 		x += w;
 	}
 	w = TEXTW(m->ltsymbol);
@@ -1410,6 +1418,33 @@ movemouse(const Arg *arg)
 	}
 }
 
+void
+nametag(const Arg *arg)
+{
+	char *p, name[MAX_TAGLEN];
+	FILE *f;
+	int i;
+
+	if (!(f = popen("dmenu -p 'tag:' < /dev/null", "r")))
+		return;
+	p = fgets(name, MAX_TAGLEN, f);
+	pclose(f);
+	if (!p)
+		return;
+	if ((p = strchr(name, '\n')))
+		*p = '\0';
+	if (!name[0])
+		return;
+	for (i = 0; i < LENGTH(tags); i++)
+		if (selmon->tagset[selmon->seltags] & (1 << i)) {
+			if (!strcmp(name, "-"))
+				snprintf(selmon->tagnames[i], MAX_TAGLEN, "%d", i + 1);
+			else
+				snprintf(selmon->tagnames[i], MAX_TAGLEN, "%d:%s", i + 1, name);
+		}
+	drawbars();
+}
+
 Client *
 nexttiled(Client *c)
 {
@@ -1899,6 +1934,8 @@ showhide(Client *c)
 		return;
 	if (ISVISIBLE(c)) {
 		if ((c->tags & SPTAGMASK) && c->isfloating) {
+			c->w = c->mon->ww * 0.8;
+			c->h = c->mon->wh * 0.8;
 			c->x = c->mon->wx + (c->mon->ww / 2 - WIDTH(c) / 2);
 			c->y = c->mon->wy + (c->mon->wh / 2 - HEIGHT(c) / 2);
 		}
